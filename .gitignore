@@ -1,0 +1,20 @@
+## Build
+bin/
+obj/
+out/
+
+## Banco de dados local (gerado automaticamente ao executar a API)
+*.db
+*.db-shm
+*.db-wal
+
+## IDEs
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+## Sistema operacional
+.DS_Store
+Thumbs.db

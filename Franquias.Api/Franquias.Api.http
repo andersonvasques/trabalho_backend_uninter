@@ -1,0 +1,434 @@
+### =====================================================================
+### API de Gestão de Franquias - coleção de testes
+### Execute o projeto (dotnet run) e utilize este arquivo no
+### Visual Studio, Visual Studio Code (extensão REST Client) ou Rider.
+### =====================================================================
+
+@host = http://localhost:5210
+
+### 1. Verificação de saúde da API
+GET {{host}}/health
+
+### 2. Login do administrador da franqueadora
+# @name login
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@saborecia.com.br",
+  "senha": "Senha@123"
+}
+
+### O token devolvido no login é reaproveitado nas próximas requisições.
+@token = {{login.response.body.token}}
+
+### 3. Dados do usuário autenticado
+GET {{host}}/api/auth/eu
+Authorization: Bearer {{token}}
+
+### 4. Login de um gestor de unidade (acesso restrito à própria unidade)
+# @name loginGestor
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "gestor.batel@saborecia.com.br",
+  "senha": "Senha@123"
+}
+
+@tokenGestor = {{loginGestor.response.body.token}}
+
+### 5. Exemplo de acesso negado: gestor tentando cadastrar usuário
+POST {{host}}/api/usuarios
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
+
+{
+  "nome": "Usuário Teste",
+  "email": "teste@saborecia.com.br",
+  "senha": "Senha@123",
+  "perfil": "Operador",
+  "unidadeFranqueadaId": 1
+}
+
+### 6. Exemplo de requisição sem token (401 Unauthorized)
+GET {{host}}/api/unidades
+
+### =====================================================================
+### UNIDADES
+### =====================================================================
+
+### 7. Listar unidades com filtros, ordenação e paginação
+GET {{host}}/api/unidades?pagina=1&tamanhoPagina=10&ordenarPor=cidade&decrescente=false
+Authorization: Bearer {{token}}
+
+### 8. Buscar unidades ativas de uma cidade
+GET {{host}}/api/unidades?cidade=Curitiba&situacao=Ativa
+Authorization: Bearer {{token}}
+
+### 9. Buscar unidades inativas
+GET {{host}}/api/unidades?situacao=Inativa
+Authorization: Bearer {{token}}
+
+### 10. Consultar uma unidade
+GET {{host}}/api/unidades/1
+Authorization: Bearer {{token}}
+
+### 11. Cadastrar uma nova unidade
+POST {{host}}/api/unidades
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "codigo": "UN-006",
+  "franqueadoraId": 1,
+  "franqueadoId": 2,
+  "razaoSocial": "Sabor Maringá LTDA",
+  "nomeFantasia": "Sabor & Cia Maringá",
+  "cnpj": "10111213000144",
+  "email": "maringa@saborecia.com.br",
+  "telefone": "4433001100",
+  "logradouro": "Avenida Brasil",
+  "numero": "1500",
+  "bairro": "Centro",
+  "cidade": "Maringá",
+  "uf": "PR",
+  "cep": "87013000",
+  "responsavelNome": "Bruno Carvalho Lima",
+  "responsavelTelefone": "41977776666",
+  "dataInicioContrato": "2026-01-15",
+  "percentualRoyalty": 5.0,
+  "situacao": "Ativa"
+}
+
+### 12. Validação: CNPJ inválido (retorna 400 com a lista de erros)
+POST {{host}}/api/unidades
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "codigo": "UN-007",
+  "franqueadoraId": 1,
+  "franqueadoId": 1,
+  "razaoSocial": "Unidade Teste LTDA",
+  "nomeFantasia": "Unidade Teste",
+  "cnpj": "00000000000000",
+  "cidade": "Curitiba",
+  "uf": "PR",
+  "dataInicioContrato": "2026-01-15",
+  "percentualRoyalty": 5.0
+}
+
+### 13. Regra de negócio: CNPJ duplicado (retorna 409 Conflict)
+POST {{host}}/api/unidades
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "codigo": "UN-008",
+  "franqueadoraId": 1,
+  "franqueadoId": 1,
+  "razaoSocial": "Unidade Duplicada LTDA",
+  "nomeFantasia": "Unidade Duplicada",
+  "cnpj": "22334455000186",
+  "cidade": "Curitiba",
+  "uf": "PR",
+  "dataInicioContrato": "2026-01-15",
+  "percentualRoyalty": 5.0
+}
+
+### 14. Inativar unidade (exclusão lógica)
+DELETE {{host}}/api/unidades/4
+Authorization: Bearer {{token}}
+
+### 15. Reativar unidade
+PATCH {{host}}/api/unidades/4/ativar
+Authorization: Bearer {{token}}
+
+### =====================================================================
+### CATÁLOGO: CATEGORIAS, PRODUTOS E FORNECEDORES
+### =====================================================================
+
+### 16. Listar categorias
+GET {{host}}/api/categorias
+Authorization: Bearer {{token}}
+
+### 17. Listar produtos por categoria e situação
+GET {{host}}/api/produtos?categoriaId=1&ativo=true&ordenarPor=preco&decrescente=true
+Authorization: Bearer {{token}}
+
+### 18. Buscar produto por nome
+GET {{host}}/api/produtos?busca=café
+Authorization: Bearer {{token}}
+
+### 19. Cadastrar um novo produto
+POST {{host}}/api/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "sku": "BEB-004",
+  "nome": "Chá Gelado de Limão",
+  "descricao": "Chá gelado 300 ml.",
+  "categoriaId": 1,
+  "tipo": "Produto",
+  "precoBase": 9.5,
+  "estoqueMinimoPadrao": 20
+}
+
+### 20. Inativar produto
+DELETE {{host}}/api/produtos/8
+Authorization: Bearer {{token}}
+
+### 21. Listar fornecedores
+GET {{host}}/api/fornecedores?ativo=true
+Authorization: Bearer {{token}}
+
+### 22. Cadastrar fornecedor
+POST {{host}}/api/fornecedores
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "razaoSocial": "Café Serra Azul Indústria LTDA",
+  "nomeFantasia": "Serra Azul",
+  "cnpj": "10111213000144",
+  "email": "vendas@serraazul.com.br",
+  "telefone": "3533004400",
+  "cidade": "Poços de Caldas",
+  "uf": "MG"
+}
+
+### 23. Associar produto a um fornecedor
+POST {{host}}/api/fornecedores/1/produtos
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "produtoServicoId": 3,
+  "precoCusto": 3.5,
+  "prazoEntregaDias": 4,
+  "preferencial": false
+}
+
+### =====================================================================
+### ESTOQUE
+### =====================================================================
+
+### 24. Consultar estoque de uma unidade
+GET {{host}}/api/estoques?unidadeFranqueadaId=1&pagina=1&tamanhoPagina=20
+Authorization: Bearer {{token}}
+
+### 25. Consultar itens abaixo do estoque mínimo
+GET {{host}}/api/estoques/criticos?unidadeFranqueadaId=1
+Authorization: Bearer {{token}}
+
+### 26. Registrar entrada de estoque
+POST {{host}}/api/estoques/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "unidadeFranqueadaId": 1,
+  "produtoServicoId": 5,
+  "quantidade": 100,
+  "tipo": "Entrada",
+  "motivo": "Recebimento do fornecedor Massa Fina."
+}
+
+### 27. Regra de negócio: saída maior que o saldo (retorna 400)
+POST {{host}}/api/estoques/movimentacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "unidadeFranqueadaId": 1,
+  "produtoServicoId": 5,
+  "quantidade": 999999,
+  "tipo": "Saida",
+  "motivo": "Teste de estoque insuficiente."
+}
+
+### 28. Histórico de movimentações
+GET {{host}}/api/estoques/movimentacoes?unidadeFranqueadaId=1&tipo=Saida&pagina=1&tamanhoPagina=10
+Authorization: Bearer {{token}}
+
+### 29. Definir estoque mínimo
+PUT {{host}}/api/estoques/minimo
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "unidadeFranqueadaId": 1,
+  "produtoServicoId": 5,
+  "quantidadeMinima": 25
+}
+
+### =====================================================================
+### VENDAS
+### =====================================================================
+
+### 30. Registrar uma venda com dois itens
+# @name novaVenda
+POST {{host}}/api/vendas
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
+
+{
+  "unidadeFranqueadaId": 1,
+  "formaPagamento": "Pix",
+  "desconto": 2.5,
+  "cliente": "João da Silva",
+  "observacao": "Venda de demonstração.",
+  "itens": [
+    { "produtoServicoId": 1, "quantidade": 3 },
+    { "produtoServicoId": 4, "quantidade": 2 }
+  ]
+}
+
+### 31. Consultar a venda registrada
+GET {{host}}/api/vendas/{{novaVenda.response.body.id}}
+Authorization: Bearer {{tokenGestor}}
+
+### 32. Regra de negócio: venda sem itens (retorna 400)
+POST {{host}}/api/vendas
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
+
+{
+  "unidadeFranqueadaId": 1,
+  "formaPagamento": "Dinheiro",
+  "itens": []
+}
+
+### 33. Regra de negócio: gestor tentando vender para outra unidade (403)
+POST {{host}}/api/vendas
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
+
+{
+  "unidadeFranqueadaId": 2,
+  "formaPagamento": "Dinheiro",
+  "itens": [
+    { "produtoServicoId": 1, "quantidade": 1 }
+  ]
+}
+
+### 34. Listar vendas por unidade e período
+GET {{host}}/api/vendas?unidadeFranqueadaId=1&dataInicial=2026-01-01&dataFinal=2026-12-31&ordenarPor=valor&decrescente=true
+Authorization: Bearer {{token}}
+
+### 35. Cancelar venda (devolve os itens ao estoque)
+PATCH {{host}}/api/vendas/{{novaVenda.response.body.id}}/cancelar
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "motivo": "Cliente desistiu da compra."
+}
+
+### =====================================================================
+### ROYALTIES
+### =====================================================================
+
+### 36. Apurar royalties de uma competência
+POST {{host}}/api/royalties/apuracoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ano": 2026,
+  "mes": 8,
+  "diaDoVencimento": 10
+}
+
+### 37. Listar royalties pendentes
+GET {{host}}/api/royalties?situacao=Pendente&pagina=1&tamanhoPagina=20
+Authorization: Bearer {{token}}
+
+### 38. Registrar pagamento de uma cobrança
+PUT {{host}}/api/royalties/1/pagamento
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "valorPago": 500.00
+}
+
+### =====================================================================
+### CHAMADOS
+### =====================================================================
+
+### 39. Abrir chamado pela unidade
+# @name novoChamado
+POST {{host}}/api/chamados
+Authorization: Bearer {{tokenGestor}}
+Content-Type: application/json
+
+{
+  "unidadeFranqueadaId": 1,
+  "titulo": "Equipamento com defeito",
+  "descricao": "A máquina de café da unidade parou de funcionar nesta manhã.",
+  "categoria": "Operacional",
+  "prioridade": "Alta"
+}
+
+### 40. Listar chamados em aberto por prioridade
+GET {{host}}/api/chamados?apenasEmAberto=true&ordenarPor=prioridade&decrescente=true
+Authorization: Bearer {{token}}
+
+### 41. Registrar interação no chamado
+POST {{host}}/api/chamados/{{novoChamado.response.body.id}}/interacoes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "mensagem": "Técnico acionado, visita agendada para amanhã.",
+  "novoStatus": "EmAtendimento"
+}
+
+### 42. Encerrar chamado
+PUT {{host}}/api/chamados/{{novoChamado.response.body.id}}/encerramento
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "solucaoAplicada": "Equipamento substituído pela franqueadora.",
+  "statusFinal": "Resolvido"
+}
+
+### =====================================================================
+### RELATÓRIOS E INDICADORES
+### =====================================================================
+
+### 43. Faturamento por unidade no período
+GET {{host}}/api/relatorios/faturamento?dataInicial=2026-01-01&dataFinal=2026-12-31
+Authorization: Bearer {{token}}
+
+### 44. Ranking de unidades por faturamento
+GET {{host}}/api/relatorios/ranking-unidades?dataInicial=2026-01-01&dataFinal=2026-12-31&quantidade=5
+Authorization: Bearer {{token}}
+
+### 45. Produtos mais vendidos
+GET {{host}}/api/relatorios/produtos-mais-vendidos?dataInicial=2026-01-01&dataFinal=2026-12-31&quantidade=5
+Authorization: Bearer {{token}}
+
+### 46. Estoque crítico da rede
+GET {{host}}/api/relatorios/estoque-critico
+Authorization: Bearer {{token}}
+
+### 47. Royalties por unidade no período
+GET {{host}}/api/relatorios/royalties?dataInicial=2026-01-01&dataFinal=2026-12-31
+Authorization: Bearer {{token}}
+
+### 48. Chamados por situação
+GET {{host}}/api/relatorios/chamados-por-status
+Authorization: Bearer {{token}}
+
+### 49. Chamados em aberto por prioridade
+GET {{host}}/api/relatorios/chamados-por-prioridade
+Authorization: Bearer {{token}}
+
+### 50. Painel gerencial da rede
+GET {{host}}/api/relatorios/painel?dataInicial=2026-01-01&dataFinal=2026-12-31
+Authorization: Bearer {{token}}
